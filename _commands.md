@@ -38,6 +38,20 @@ Check the API:
 curl http://localhost:8000/health
 ```
 
+Check prediction:
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"square_footage":1550,"bedrooms":3,"bathrooms":2,"year_built":1997,"lot_size":6800,"distance_to_city_center":4.1,"school_rating":7.6}'
+```
+
+Check model info:
+
+```bash
+curl http://localhost:8000/model-info
+```
+
 Open the API docs:
 
 ```text

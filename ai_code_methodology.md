@@ -1,0 +1,1 @@
+- Use special commits to split the code in one file into different sections, such as the main process, helper functions, data processing, and other related parts.

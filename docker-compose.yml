@@ -10,8 +10,10 @@ services:
       PYTHONUNBUFFERED: "1"
       MODEL_DATA_PATH: "/app/data/House Price Dataset.csv"
       MODEL_TEST_DATA_PATH: "/app/data/Test Data For Prediction.csv"
+      MODEL_ARTIFACT_PATH: "/app/artifacts/ridge_model.joblib"
     volumes:
       - ./1_1_predict_model/model_api:/app/model_api
+      - ./1_1_predict_model/artifacts:/app/artifacts
       - ./_requirements:/app/data:ro
     command:
       [

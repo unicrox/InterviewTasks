@@ -4,4 +4,4 @@ scikit-learn==1.7.0
 pandas==2.3.0
 numpy==2.3.1
 pydantic==2.11.7
-
+joblib==1.5.1

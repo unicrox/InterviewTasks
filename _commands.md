@@ -2,6 +2,18 @@
 
 ## Task 1: Model API
 
+Train the Ridge regression model:
+
+```bash
+docker compose exec model-api python -m model_api.train
+```
+
+Run predictions for the supplied test data:
+
+```bash
+docker compose exec model-api python -m model_api.test
+```
+
 Start or rebuild the service:
 
 ```bash

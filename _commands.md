@@ -57,3 +57,18 @@ Open the API docs:
 ```text
 http://localhost:8000/docs
 ```
+
+## Task 2: Python Backend
+
+Start the local Python backend:
+
+```bash
+cd 2_2_backend_py
+uvicorn app.main:app --reload --port 8001
+```
+
+Open the API docs:
+
+```text
+http://localhost:8001/docs
+```

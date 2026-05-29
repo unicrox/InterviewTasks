@@ -15,6 +15,7 @@ MODEL_API_URL = os.getenv("MODEL_API_URL", "http://localhost:8000").rstrip("/")
 MODEL_API_TIMEOUT_SECONDS = float(os.getenv("MODEL_API_TIMEOUT_SECONDS", "10"))
 DEFAULT_TEST_DATA_PATH = Path(__file__).resolve().parents[2] / "_requirements" / "Test Data For Prediction.csv"
 TEST_DATA_PATH = Path(os.getenv("TEST_DATA_PATH", DEFAULT_TEST_DATA_PATH))
+SERVER_TIMEZONE = "Asia/Shanghai"
 
 
 class HousingFeatures(BaseModel):
@@ -84,7 +85,7 @@ async def load_seed_estimates() -> None:
     except httpx.HTTPError:
         pass
 
-    created_at = arrow.utcnow().datetime
+    created_at = arrow.now(SERVER_TIMEZONE).datetime
     for index, features in enumerate(seed_features):
         estimate = EstimateRecord(
             id=str(uuid4()),
@@ -170,7 +171,7 @@ async def create_estimate(payload: EstimateRequest) -> EstimateRecord:
         label=payload.label,
         features=payload.features,
         predicted_price=round(float(predictions[0]), 2),
-        created_at=arrow.utcnow().datetime,
+        created_at=arrow.now(SERVER_TIMEZONE).datetime,
     )
     ESTIMATES[estimate.id] = estimate
 
@@ -190,6 +191,47 @@ def get_estimate(estimate_id: str) -> EstimateRecord:
     estimate = ESTIMATES.get(estimate_id)
     if estimate is None:
         raise HTTPException(status_code=404, detail=f"Estimate not found: {estimate_id}")
+
+    return estimate
+
+
+@app.put("/estimates/{estimate_id}")
+async def update_estimate(estimate_id: str, payload: EstimateRequest) -> EstimateRecord:
+    existing_estimate = ESTIMATES.get(estimate_id)
+    if existing_estimate is None:
+        raise HTTPException(status_code=404, detail=f"Estimate not found: {estimate_id}")
+
+    try:
+        async with httpx.AsyncClient(timeout=MODEL_API_TIMEOUT_SECONDS) as client:
+            response = await client.post(
+                f"{MODEL_API_URL}/predict",
+                json=payload.features.model_dump(),
+            )
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=exc.response.status_code,
+            detail=f"Model API prediction failed: {exc.response.text}",
+        ) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Model API unavailable: {exc}",
+        ) from exc
+
+    prediction_payload = response.json()
+    predictions = prediction_payload.get("predictions")
+    if not isinstance(predictions, list) or not predictions:
+        raise HTTPException(status_code=502, detail="Model API returned no predictions.")
+
+    estimate = EstimateRecord(
+        id=estimate_id,
+        label=payload.label,
+        features=payload.features,
+        predicted_price=round(float(predictions[0]), 2),
+        created_at=existing_estimate.created_at,
+    )
+    ESTIMATES[estimate.id] = estimate
 
     return estimate
 

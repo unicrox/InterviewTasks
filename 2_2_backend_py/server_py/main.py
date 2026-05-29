@@ -1,11 +1,12 @@
 from typing import Annotated
 from contextlib import asynccontextmanager
 import csv
-from datetime import datetime, timezone
+from datetime import datetime
 import os
 from pathlib import Path
 from uuid import uuid4
 
+import arrow
 import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -81,7 +82,7 @@ async def load_seed_estimates() -> None:
     except httpx.HTTPError:
         pass
 
-    created_at = datetime.now(timezone.utc)
+    created_at = arrow.utcnow().datetime
     for index, features in enumerate(seed_features):
         estimate = EstimateRecord(
             id=str(uuid4()),
@@ -147,7 +148,7 @@ async def create_estimate(payload: EstimateRequest) -> EstimateRecord:
         label=payload.label,
         features=payload.features,
         predicted_price=round(float(predictions[0]), 2),
-        created_at=datetime.now(timezone.utc),
+        created_at=arrow.utcnow().datetime,
     )
     ESTIMATES[estimate.id] = estimate
 

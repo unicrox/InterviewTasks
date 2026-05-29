@@ -1,6 +1,6 @@
 "use client"
 
-import { Edit, Plus, RefreshCw, X } from "lucide-react"
+import { Edit, GitCompareArrows, Plus, RefreshCw, X } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -59,6 +59,8 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   timeStyle: "short",
 })
 
+const maxCompareSelections = 5
+
 async function requestEstimates() {
   const response = await fetch("/api/estimates", { cache: "no-store" })
   const payload = (await response.json()) as Partial<EstimateListResponse> & {
@@ -81,7 +83,10 @@ export function EstimateHistory() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isCompareDialogOpen, setIsCompareDialogOpen] = useState(false)
   const [selectedEstimate, setSelectedEstimate] = useState<EstimateRecord | null>(null)
+  const [selectedEstimateIds, setSelectedEstimateIds] = useState<string[]>([])
+  const [selectionMessage, setSelectionMessage] = useState<string | null>(null)
   const [formState, setFormState] = useState<EstimateFormState>(emptyFormState)
   const [formError, setFormError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -94,6 +99,9 @@ export function EstimateHistory() {
       const payload = await requestEstimates()
       setEstimates(payload.items)
       setEstimateCount(payload.count)
+      setSelectedEstimateIds((current) =>
+        current.filter((estimateId) => payload.items.some((estimate) => estimate.id === estimateId))
+      )
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Failed to connect to backend")
     } finally {
@@ -122,6 +130,23 @@ export function EstimateHistory() {
     })
     setFormError(null)
     setIsDialogOpen(true)
+  }
+
+  function toggleEstimateSelection(estimateId: string, isSelected: boolean) {
+    setSelectedEstimateIds((current) => {
+      if (isSelected) {
+        if (current.length >= maxCompareSelections && !current.includes(estimateId)) {
+          setSelectionMessage("You can only select five properties to compare.")
+          return current
+        }
+
+        setSelectionMessage(null)
+        return current.includes(estimateId) ? current : [...current, estimateId]
+      }
+
+      setSelectionMessage(null)
+      return current.filter((selectedEstimateId) => selectedEstimateId !== estimateId)
+    })
   }
 
   async function submitEstimate(event: FormEvent<HTMLFormElement>) {
@@ -181,6 +206,11 @@ export function EstimateHistory() {
         if (!cancelled) {
           setEstimates(payload.items)
           setEstimateCount(payload.count)
+          setSelectedEstimateIds((current) =>
+            current.filter((estimateId) =>
+              payload.items.some((estimate) => estimate.id === estimateId)
+            )
+          )
         }
       } catch (error) {
         if (!cancelled) {
@@ -200,12 +230,70 @@ export function EstimateHistory() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!selectionMessage) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setSelectionMessage(null)
+    }, 5000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [selectionMessage])
+
+  const compareEstimates = selectedEstimateIds
+    .map((estimateId) => estimates.find((estimate) => estimate.id === estimateId))
+    .filter((estimate): estimate is EstimateRecord => Boolean(estimate))
+
+  const compareRows = [
+    {
+      label: "Square footage",
+      values: compareEstimates.map((estimate) =>
+        `${estimate.features.square_footage.toLocaleString()} sq ft`
+      ),
+    },
+    {
+      label: "Bedrooms",
+      values: compareEstimates.map((estimate) => estimate.features.bedrooms.toLocaleString()),
+    },
+    {
+      label: "Bathrooms",
+      values: compareEstimates.map((estimate) => estimate.features.bathrooms.toLocaleString()),
+    },
+    {
+      label: "Year built",
+      values: compareEstimates.map((estimate) => String(estimate.features.year_built)),
+    },
+    {
+      label: "Lot size",
+      values: compareEstimates.map((estimate) =>
+        `${estimate.features.lot_size.toLocaleString()} sq ft`
+      ),
+    },
+    {
+      label: "Distance to city center",
+      values: compareEstimates.map(
+        (estimate) => `${estimate.features.distance_to_city_center.toLocaleString()} mi`
+      ),
+    },
+    {
+      label: "School rating",
+      values: compareEstimates.map((estimate) => estimate.features.school_rating.toLocaleString()),
+    },
+  ]
+
   return (
     <>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-normal">Estimator</h1>
           <p className="mt-1 text-sm text-muted-foreground">Estimate history</p>
+          {selectionMessage ? (
+            <p className="mt-2 text-sm text-destructive">{selectionMessage}</p>
+          ) : null}
         </div>
         <div className="flex items-center gap-3">
           <p className="text-sm text-muted-foreground">{estimateCount} estimates</p>
@@ -219,6 +307,17 @@ export function EstimateHistory() {
             <RefreshCw className={isLoading ? "animate-spin" : undefined} />
             Refresh
           </Button>
+          {selectedEstimateIds.length >= 2 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCompareDialogOpen(true)}
+            >
+              <GitCompareArrows />
+              Compare
+            </Button>
+          ) : null}
           <Button
             type="button"
             size="sm"
@@ -232,7 +331,8 @@ export function EstimateHistory() {
       </div>
 
       <div className="overflow-hidden rounded-md border">
-        <div className="hidden grid-cols-[1fr_9rem_8rem_7rem_5rem] gap-4 border-b bg-muted/50 px-4 py-3 text-xs font-medium text-muted-foreground sm:grid">
+        <div className="hidden grid-cols-[2rem_1fr_9rem_8rem_7rem_5rem] gap-4 border-b bg-muted/50 px-4 py-3 text-xs font-medium text-muted-foreground sm:grid">
+          <span aria-hidden="true" />
           <span>Property</span>
           <span>Date</span>
           <span className="text-right">Estimate</span>
@@ -251,8 +351,19 @@ export function EstimateHistory() {
             {estimates.map((estimate) => (
               <li
                 key={estimate.id}
-                className="grid gap-3 px-4 py-4 sm:grid-cols-[1fr_9rem_8rem_7rem_5rem] sm:items-center sm:gap-4"
+                className="grid grid-cols-[2rem_1fr] gap-3 px-4 py-4 sm:grid-cols-[2rem_1fr_9rem_8rem_7rem_5rem] sm:items-center sm:gap-4"
               >
+                <div className="pt-1 sm:pt-0">
+                  <input
+                    type="checkbox"
+                    className="size-4 rounded border-border accent-primary"
+                    checked={selectedEstimateIds.includes(estimate.id)}
+                    onChange={(event) =>
+                      toggleEstimateSelection(estimate.id, event.target.checked)
+                    }
+                    aria-label={`Select ${estimate.label ?? `estimate ${estimate.id.slice(0, 8)}`}`}
+                  />
+                </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <h2 className="font-medium">
@@ -269,18 +380,18 @@ export function EstimateHistory() {
                   </p>
                 </div>
 
-                <div className="text-sm text-muted-foreground">
+                <div className="col-start-2 text-sm text-muted-foreground sm:col-start-auto">
                   {dateFormatter.format(new Date(estimate.created_at))}
                 </div>
-                <div className="font-medium sm:text-right">
+                <div className="col-start-2 font-medium sm:col-start-auto sm:text-right">
                   {estimate.predicted_price === null
                     ? "Not available"
                     : currencyFormatter.format(estimate.predicted_price)}
                 </div>
-                <div className="text-sm text-muted-foreground sm:text-right">
+                <div className="col-start-2 text-sm text-muted-foreground sm:col-start-auto sm:text-right">
                   {estimate.predicted_price === null ? "Pending" : "Completed"}
                 </div>
-                <div className="sm:text-right">
+                <div className="col-start-2 sm:col-start-auto sm:text-right">
                   <Button
                     type="button"
                     variant="outline"
@@ -475,6 +586,71 @@ export function EstimateHistory() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {isCompareDialogOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="compare-dialog-title"
+            className="max-h-[calc(100svh-2rem)] w-full max-w-5xl overflow-hidden rounded-md border bg-background shadow-lg"
+          >
+            <div className="flex items-center justify-between border-b px-5 py-4">
+              <div>
+                <h2 id="compare-dialog-title" className="text-lg font-semibold">
+                  Compare estimates
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {compareEstimates.length} selected properties
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsCompareDialogOpen(false)}
+                aria-label="Close compare dialog"
+              >
+                <X />
+              </Button>
+            </div>
+
+            <div className="overflow-auto px-5 py-5">
+              <table className="w-full min-w-[44rem] border-collapse text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs font-medium text-muted-foreground">
+                    <th className="w-44 px-3 py-3">Feature</th>
+                    {compareEstimates.map((estimate) => (
+                      <th key={estimate.id} className="min-w-40 px-3 py-3">
+                        <span className="block font-medium text-foreground">
+                          {estimate.label ?? `Estimate ${estimate.id.slice(0, 8)}`}
+                        </span>
+                        <span className="mt-1 block font-normal text-muted-foreground">
+                          {estimate.id.slice(0, 8)}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {compareRows.map((row) => (
+                    <tr key={row.label} className="border-b last:border-b-0">
+                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">
+                        {row.label}
+                      </th>
+                      {row.values.map((value, index) => (
+                        <td key={`${row.label}-${compareEstimates[index]?.id}`} className="px-3 py-3">
+                          {value}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       ) : null}

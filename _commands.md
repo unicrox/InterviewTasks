@@ -64,7 +64,7 @@ Start the local Python backend:
 
 ```bash
 cd 2_2_backend_py
-uvicorn app.main:app --reload --port 8001
+uvicorn server_py.main:app --reload --port 8001
 ```
 
 Open the API docs:

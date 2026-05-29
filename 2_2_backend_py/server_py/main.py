@@ -53,6 +53,8 @@ class DeleteEstimateResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     model_api_url: str
+    model_api_status: str
+    model_api_error: str | None = None
     stored_estimates: int
 
 
@@ -109,10 +111,30 @@ app = FastAPI(
 
 
 @app.get("/health")
-def health() -> HealthResponse:
+async def health() -> HealthResponse:
+    model_api_status = "ok"
+    model_api_error = None
+
+    try:
+        async with httpx.AsyncClient(timeout=MODEL_API_TIMEOUT_SECONDS) as client:
+            response = await client.get(f"{MODEL_API_URL}/health")
+        response.raise_for_status()
+        model_health = response.json()
+        if model_health.get("status") != "ok":
+            model_api_status = "unhealthy"
+            model_api_error = f"Unexpected health response: {model_health}"
+    except httpx.HTTPStatusError as exc:
+        model_api_status = "unhealthy"
+        model_api_error = f"HTTP {exc.response.status_code}: {exc.response.text}"
+    except httpx.HTTPError as exc:
+        model_api_status = "unavailable"
+        model_api_error = str(exc)
+
     return HealthResponse(
         status="ok",
         model_api_url=MODEL_API_URL,
+        model_api_status=model_api_status,
+        model_api_error=model_api_error,
         stored_estimates=len(ESTIMATES),
     )
 

@@ -1,48 +1,146 @@
-# Interview Tasks
+# Interview Tasks Fullstack
 
-This repository contains the implementation workspace for the full-stack interview tasks.
+Full-stack housing price demo for the interview task.
 
-## Requirements Summary
+The project includes:
 
-### Task 1: Housing Price Prediction Model API
+- Task 1: Python FastAPI model API for house price prediction
+- Task 2 App 1: Property Value Estimator with Python backend
+- Task 2 App 2: Property Market Analysis with Java Spring Boot backend
+- Next.js portal with shared navigation, loading/error states, dashboard, history, comparison, what-if analysis, and exports
 
-Build a Python 3.12+ FastAPI service that trains and serves a simple scikit-learn regression model for housing price prediction.
+## Screenshots
 
-Required endpoints:
+### Welcome
 
-- `POST /predict` accepts single or batch housing feature inputs and returns predicted prices.
-- `GET /model-info` returns model coefficients and performance metrics.
-- `GET /health` returns a basic service health check.
+![Welcome](screenshot/welcome.png)
 
-Deliverables include source code, a Dockerfile, and a live Swagger/OpenAPI demo during the interview.
+### Property Value Estimator
 
-### Task 2: Multi-Application Next.js Portal
+![Estimator](screenshot/estimator.png)
 
-Build a unified Next.js App Router portal that hosts two applications with a shared layout, navigation, design system, loading states, and error handling.
+### Edit Estimate
 
-- `Property Value Estimator`: frontend form and comparison views backed by a Python service that integrates with the ML model container.
-- `Property Market Analysis`: dashboard, filters, what-if analysis, exports, and sortable tables backed by a Java 21 / Spring Boot 3.4.4 service.
+![Estimator edit](screenshot/estimator_edit.png)
 
-## Repository Structure
+### Market Analysis
+
+![Analysis](screenshot/analysis.png)
+
+### What-if Analysis
+
+![Analysis what-if](screenshot/analysis_whatif.png)
+
+## Project Structure
 
 ```text
 .
-├── 1_1_predict_model/      # Task 1 FastAPI ML model service
-├── 2_1_frontend/           # Task 2 Next.js portal
-├── 2_2_backend_py/         # Task 2 Python backend
-├── 2_3_backend_java/       # Task 2 Java Spring Boot backend
-└── _requirements/          # Original task brief and datasets
+├── 1_1_predict_model/      # FastAPI ML model service
+├── 2_1_frontend/           # Next.js portal
+├── 2_2_backend_py/         # Python estimator backend
+├── 2_3_backend_java/       # Java Spring Boot market backend
+├── _requirements/          # PDF brief and CSV datasets
+└── screenshot/             # UI screenshots
 ```
+
+## Main Features
+
+- Train and serve a scikit-learn regression model
+- Predict single or batch house prices
+- Show model info, coefficients, and metrics
+- Save and compare estimator history
+- Market dashboard with filters, sorting, and price bars
+- What-if analysis powered by the ML model
+- CSV and PDF export options
+- Server health checks for Python, model, and Java services
+
+## Run The Project
+
+### 1. Start the model API
+
+```bash
+docker compose up --build model-api
+```
+
+Model API:
+
+- API: `http://localhost:8000`
+- Swagger: `http://localhost:8000/docs`
+- Health: `http://localhost:8000/health`
+
+The Docker startup trains the model before launching FastAPI.
+
+### 2. Start the Python estimator backend
+
+```bash
+cd 2_2_backend_py
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn server_py.main:app --host 0.0.0.0 --port 8001 --reload
+```
+
+Python backend:
+
+- API: `http://localhost:8001`
+- Health: `http://localhost:8001/health`
+
+### 3. Start the Java market backend
+
+Requires Java 21.
+
+```bash
+cd 2_3_backend_java/market-analysis
+./mvnw clean spring-boot:run
+```
+
+Java backend:
+
+- API: `http://localhost:8080`
+- Health: `http://localhost:8080/actuator/health`
+
+### 4. Start the Next.js frontend
+
+```bash
+cd 2_1_frontend/next_app
+npm install
+npm run dev
+```
+
+Frontend:
+
+- Portal: `http://localhost:3000`
+
+## Useful Checks
+
+```bash
+cd 2_1_frontend/next_app
+npm run lint
+npm run typecheck
+npm run build
+```
+
+```bash
+cd 2_3_backend_java/market-analysis
+java -version
+./mvnw -v
+./mvnw help:evaluate -Dexpression=project.parent.version -q -DforceStdout
+```
+
+Expected:
+
+- Java: `21`
+- Spring Boot: `3.4.4`
 
 ## Data
 
-The supplied data is stored in `_requirements/`:
+Datasets live in `_requirements/`:
 
-- `House Price Dataset.csv`: training data with 50 rows.
-- `Test Data For Prediction.csv`: sample prediction data with 10 rows.
-- `Interview Tasks Fullstack.pdf`: original task brief.
+- `House Price Dataset.csv`
+- `Test Data For Prediction.csv`
+- `Interview Tasks Fullstack.pdf`
 
-Model input fields:
+Model fields:
 
 - `square_footage`
 - `bedrooms`
@@ -51,23 +149,3 @@ Model input fields:
 - `lot_size`
 - `distance_to_city_center`
 - `school_rating`
-
-Training data also includes `id` and target field `price`.
-
-## Notes
-
-Keep generated files, local environments, dependency folders, model artifacts, and build outputs out of git. See `.gitignore` for the current ignore rules.
-
-## Task 1 Docker
-
-Task 1 is configured as a Dockerized FastAPI service. The API code lives under `1_1_predict_model/model_api`. Start it with:
-
-```bash
-docker compose up --build
-```
-
-The model API will be available at:
-
-- API: `http://localhost:8000`
-- Swagger UI: `http://localhost:8000/docs`
-- Health check: `http://localhost:8000/health`

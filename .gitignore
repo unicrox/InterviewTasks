@@ -74,6 +74,7 @@ build/
 *.jar
 *.war
 *.ear
+.mvn/wrapper/maven-wrapper.jar
 
 # Docker and local runtime
 docker-compose.override.yml

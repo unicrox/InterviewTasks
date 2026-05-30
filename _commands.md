@@ -72,3 +72,8 @@ Open the API docs:
 ```text
 http://localhost:8001/docs
 ```
+
+
+https://start.spring.io/
+brew install openjdk@21
+http://localhost:8080/actuator/health

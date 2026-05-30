@@ -11,12 +11,17 @@ type HealthState = {
     status: "checking" | "running" | "failed" | "unknown"
     error?: string | null
   }
+  javaServer: {
+    status: "checking" | "running" | "failed"
+    error?: string
+  }
 }
 
 export function ServerHealth() {
   const [health, setHealth] = useState<HealthState>({
     pythonServer: { status: "checking" },
     modelApi: { status: "checking" },
+    javaServer: { status: "checking" },
   })
 
   useEffect(() => {
@@ -38,6 +43,7 @@ export function ServerHealth() {
               error: error instanceof Error ? error.message : "Failed to connect",
             },
             modelApi: { status: "unknown" },
+            javaServer: { status: "failed" },
           })
         }
       }
@@ -68,6 +74,13 @@ export function ServerHealth() {
           ? "unknown"
           : "failed to connect"
 
+  const javaStatusText =
+    health.javaServer.status === "running"
+      ? "running"
+      : health.javaServer.status === "checking"
+        ? "checking"
+        : "failed to connect"
+
   const pythonStatusClass =
     health.pythonServer.status === "running"
       ? "text-green-600 dark:text-green-400"
@@ -82,6 +95,13 @@ export function ServerHealth() {
         ? "text-red-600 dark:text-red-400"
         : "text-muted-foreground"
 
+  const javaStatusClass =
+    health.javaServer.status === "running"
+      ? "text-green-600 dark:text-green-400"
+      : health.javaServer.status === "failed"
+        ? "text-red-600 dark:text-red-400"
+        : "text-muted-foreground"
+
   return (
     <div className="mt-6 space-y-2 text-center text-sm">
       <p>
@@ -91,6 +111,10 @@ export function ServerHealth() {
       <p>
         <span className="text-muted-foreground">Model server: </span>
         <span className={modelStatusClass}>{modelStatusText}</span>
+      </p>
+      <p>
+        <span className="text-muted-foreground">Java server: </span>
+        <span className={javaStatusClass}>{javaStatusText}</span>
       </p>
     </div>
   )

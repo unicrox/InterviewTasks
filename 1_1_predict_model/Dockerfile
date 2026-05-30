@@ -10,7 +10,8 @@ RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
 COPY 1_1_predict_model/model_api ./model_api
+COPY _requirements ./data
 
 EXPOSE 8000
 
-CMD ["uvicorn", "model_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "python -m model_api.train && uvicorn model_api.main:app --host 0.0.0.0 --port 8000"]

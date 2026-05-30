@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -22,9 +23,15 @@ FEATURE_COLUMNS = [
 ]
 TARGET_COLUMN = "price"
 
-DATA_PATH = Path("/app/data/House Price Dataset.csv")  # Docker training dataset path.
-TEST_DATA_PATH = Path("/app/data/Test Data For Prediction.csv")  # Docker prediction sample dataset path.
-ARTIFACT_PATH = Path("/app/artifacts/ridge_model.joblib")  # Docker model artifact path.
+DATA_PATH = Path(
+    os.getenv("MODEL_DATA_PATH", "/app/data/House Price Dataset.csv")
+)  # Docker training dataset path.
+TEST_DATA_PATH = Path(
+    os.getenv("MODEL_TEST_DATA_PATH", "/app/data/Test Data For Prediction.csv")
+)  # Docker prediction sample dataset path.
+ARTIFACT_PATH = Path(
+    os.getenv("MODEL_ARTIFACT_PATH", "/app/artifacts/ridge_model.joblib")
+)  # Docker model artifact path.
 
 
 def train_ridge_model(alpha: float = 1.0) -> dict[str, Any]:

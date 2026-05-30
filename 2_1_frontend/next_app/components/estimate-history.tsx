@@ -54,11 +54,6 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 })
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-})
-
 const maxCompareSelections = 5
 
 async function requestEstimates() {
@@ -248,6 +243,13 @@ export function EstimateHistory() {
     .map((estimateId) => estimates.find((estimate) => estimate.id === estimateId))
     .filter((estimate): estimate is EstimateRecord => Boolean(estimate))
 
+  const maxPredictedPrice = Math.max(
+    0,
+    ...estimates
+      .map((estimate) => estimate.predicted_price ?? 0)
+      .filter((predictedPrice) => predictedPrice > 0)
+  )
+
   const compareRows = [
     {
       label: "Square footage",
@@ -331,10 +333,10 @@ export function EstimateHistory() {
       </div>
 
       <div className="overflow-hidden rounded-md border">
-        <div className="hidden grid-cols-[2rem_1fr_9rem_8rem_7rem_5rem] gap-4 border-b bg-muted/50 px-4 py-3 text-xs font-medium text-muted-foreground sm:grid">
+        <div className="hidden grid-cols-[2rem_11rem_1fr_8rem_7rem_5rem] gap-4 border-b bg-muted/50 px-4 py-3 text-xs font-medium text-muted-foreground sm:grid">
           <span aria-hidden="true" />
           <span>Property</span>
-          <span>Date</span>
+          <span>Features</span>
           <span className="text-right">Estimate</span>
           <span className="text-right">Status</span>
           <span className="text-right">Action</span>
@@ -351,7 +353,7 @@ export function EstimateHistory() {
             {estimates.map((estimate) => (
               <li
                 key={estimate.id}
-                className="grid grid-cols-[2rem_1fr] gap-3 px-4 py-4 sm:grid-cols-[2rem_1fr_9rem_8rem_7rem_5rem] sm:items-center sm:gap-4"
+                className="grid grid-cols-[2rem_1fr] gap-3 px-4 py-4 sm:grid-cols-[2rem_11rem_1fr_8rem_7rem_5rem] sm:items-center sm:gap-4"
               >
                 <div className="pt-1 sm:pt-0">
                   <input
@@ -365,28 +367,65 @@ export function EstimateHistory() {
                   />
                 </div>
                 <div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <h2 className="font-medium">
-                      {estimate.label ?? `Estimate ${estimate.id.slice(0, 8)}`}
-                    </h2>
-                    <span className="text-xs text-muted-foreground">
-                      {estimate.id.slice(0, 8)}
-                    </span>
-                  </div>
+                  <h2 className="font-medium">
+                    {estimate.label ?? `Estimate ${estimate.id.slice(0, 8)}`}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {new Date(estimate.created_at).toLocaleString("sv-SE", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })}
+                  </p>
+                </div>
+
+                <div className="col-start-2 sm:col-start-auto">
                   <p className="mt-1 text-sm text-muted-foreground">
                     {estimate.features.square_footage.toLocaleString()} sq ft /{" "}
                     {estimate.features.bedrooms} bed / {estimate.features.bathrooms} bath / built{" "}
                     {estimate.features.year_built}
                   </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Lot {estimate.features.lot_size.toLocaleString()} sq ft /{" "}
+                    {estimate.features.distance_to_city_center.toLocaleString()} mi from center /{" "}
+                    school {estimate.features.school_rating.toLocaleString()}
+                  </p>
                 </div>
 
-                <div className="col-start-2 text-sm text-muted-foreground sm:col-start-auto">
-                  {dateFormatter.format(new Date(estimate.created_at))}
-                </div>
-                <div className="col-start-2 font-medium sm:col-start-auto sm:text-right">
-                  {estimate.predicted_price === null
-                    ? "Not available"
-                    : currencyFormatter.format(estimate.predicted_price)}
+                <div className="col-start-2 sm:col-start-auto">
+                  {estimate.predicted_price === null ? (
+                    <span className="font-medium">Not available</span>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <span className="font-medium">
+                        {currencyFormatter.format(estimate.predicted_price)}
+                      </span>
+                      <div
+                        className="h-2 overflow-hidden rounded-full bg-muted"
+                        aria-label={`${currencyFormatter.format(
+                          estimate.predicted_price
+                        )} relative predicted price`}
+                        role="img"
+                      >
+                        <div
+                          className="h-full rounded-full bg-emerald-600 dark:bg-emerald-400"
+                          style={{
+                            width: `${
+                              maxPredictedPrice > 0
+                                ? Math.max(
+                                    8,
+                                    Math.round((estimate.predicted_price / maxPredictedPrice) * 100)
+                                  )
+                                : 0
+                            }%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="col-start-2 text-sm text-muted-foreground sm:col-start-auto sm:text-right">
                   {estimate.predicted_price === null ? "Pending" : "Completed"}

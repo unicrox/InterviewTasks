@@ -252,6 +252,14 @@ export function EstimateHistory() {
 
   const compareRows = [
     {
+      label: "Predicted price",
+      values: compareEstimates.map((estimate) =>
+        estimate.predicted_price === null
+          ? "Not available"
+          : currencyFormatter.format(estimate.predicted_price)
+      ),
+    },
+    {
       label: "Square footage",
       values: compareEstimates.map((estimate) =>
         `${estimate.features.square_footage.toLocaleString()} sq ft`

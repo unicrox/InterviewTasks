@@ -73,9 +73,9 @@ The Docker startup trains the model before launching FastAPI.
 ### 2. Start the Python estimator backend
 
 ```bash
-cd 2_2_backend_py
 python -m venv .venv
 source .venv/bin/activate
+cd 2_2_backend_py
 pip install -r requirements.txt
 uvicorn server_py.main:app --host 0.0.0.0 --port 8001 --reload
 ```

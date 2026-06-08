@@ -13,6 +13,9 @@ app = FastAPI(
     description="Task 1 FastAPI service for housing price prediction.",
 )
 
+if not ARTIFACT_PATH.exists():
+    raise HTTPException(status_code=503, detail="Model artifact not found. Run training first.")
+global_artifact = joblib.load(ARTIFACT_PATH)
 
 class HousingFeatures(BaseModel):
     square_footage: Annotated[float, Field(gt=0)]
@@ -52,13 +55,13 @@ def predict(payload: HousingFeatures | list[HousingFeatures]) -> PredictionRespo
     if not ARTIFACT_PATH.exists():
         raise HTTPException(status_code=503, detail="Model artifact not found. Run training first.")
 
-    artifact = joblib.load(ARTIFACT_PATH)
     rows = payload if isinstance(payload, list) else [payload]
     prediction_input = pd.DataFrame([row.model_dump() for row in rows], columns=FEATURE_COLUMNS)
-    predictions = artifact["model"].predict(prediction_input)
+    predictions = global_artifact["model"].predict(prediction_input)
+    print([max(round(float(prediction), 2), 0) for prediction in predictions])
 
     return PredictionResponse(
-        predictions=[round(float(prediction), 2) for prediction in predictions],
+        predictions=[max(round(float(prediction), 2), 0) for prediction in predictions],
         count=len(predictions),
     )
 
@@ -66,10 +69,8 @@ def predict(payload: HousingFeatures | list[HousingFeatures]) -> PredictionRespo
 @app.get("/model-info")
 def model_info() -> ModelInfoResponse:
     # -- Load the trained model artifact and return its metadata.
-    if not ARTIFACT_PATH.exists():
-        raise HTTPException(status_code=503, detail="Model artifact not found. Run training first.")
-
-    artifact = joblib.load(ARTIFACT_PATH)
+    
+    artifact = global_artifact
 
     return ModelInfoResponse(
         model_type=artifact["model_type"],
